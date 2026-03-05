@@ -10,7 +10,7 @@ defmodule Tubie.MixProject do
       deps: deps(),
       description: "A minimal agent composition library. Agents are functions, composition is the framework.",
       package: package(),
-      source_url: "https://github.com/zxy/tubie"
+      source_url: "https://github.com/zxygentoo/tubie"
     ]
   end
 
@@ -27,7 +27,8 @@ defmodule Tubie.MixProject do
   defp package do
     [
       licenses: ["MIT"],
-      links: %{"GitHub" => "https://github.com/zxy/tubie"}
+      files: ~w(lib mix.exs README.md LICENSE),
+      links: %{"GitHub" => "https://github.com/zxygentoo/tubie"}
     ]
   end
 end
