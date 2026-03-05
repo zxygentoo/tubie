@@ -91,7 +91,6 @@ OPENAI_API_KEY=sk-... elixir examples/weather_agent.exs
 ```
 
 See the full example at [examples/weather_agent.exs](https://github.com/zxygentoo/tubie/blob/main/examples/weather_agent.exs).
-```
 
 ## License
 
