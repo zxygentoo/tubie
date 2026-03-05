@@ -4,6 +4,9 @@ A minimal agent composition library in Elixir. Inspired by [PocketFlow](https://
 
 **Core idea:** An agent is any function `State -> State`. Combinators compose agents into larger agents. That's the whole framework.
 
+- **Minimal** — zero dependencies, ~200 lines of code.
+- **Agent-friendly** — small enough for an AI agent to read, modify, and build on.
+
 ## Installation
 
 ```elixir
