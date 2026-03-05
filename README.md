@@ -87,7 +87,7 @@ Tubie.fan_out([fetch_weather.("A"), fetch_weather.("B")], as: :readings)
 ### Running the full example
 
 ```bash
-DEEPSEEK_API_KEY=sk-... elixir examples/weather_agent.exs
+OPENAI_API_KEY=sk-... elixir examples/weather_agent.exs
 ```
 
 ## License
