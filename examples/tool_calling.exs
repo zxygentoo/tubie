@@ -1,8 +1,8 @@
 # ═══════════════════════════════════════════════════════════════════
-# Weather Agent — built entirely from Tubie combinators
+# Tool Calling — built entirely from Tubie combinators
 #
-# Run:  OPENAI_API_KEY=... elixir examples/weather_agent.exs
-#   or: DEEPSEEK_API_KEY=... elixir examples/weather_agent.exs
+# Run:  OPENAI_API_KEY=... elixir examples/tool_calling.exs
+#   or: DEEPSEEK_API_KEY=... elixir examples/tool_calling.exs
 # ═══════════════════════════════════════════════════════════════════
 
 Mix.install([

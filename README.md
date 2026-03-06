@@ -51,14 +51,14 @@ Every combinator takes agents and returns a new agent. Most are pipeable.
 Each example demonstrates a different [design pattern](https://the-pocket.github.io/PocketFlow/design_pattern/) using Tubie's combinators. All examples auto-detect your LLM provider from env vars (`OPENAI_API_KEY` or `DEEPSEEK_API_KEY`).
 
 ```bash
-OPENAI_API_KEY=sk-... elixir examples/weather_agent.exs
+OPENAI_API_KEY=sk-... elixir examples/tool_calling.exs
 # or
 DEEPSEEK_API_KEY=... elixir examples/rag.exs
 ```
 
 | Example | Pattern | Key Combinators |
 |---|---|---|
-| [weather_agent.exs](examples/weather_agent.exs) | Agent + Tool Use | `branch`, `loop`, `with_retry`, `with_fallback` |
+| [tool_calling.exs](examples/tool_calling.exs) | Tool Use | `branch`, `loop`, `with_retry`, `with_fallback` |
 | [rag.exs](examples/rag.exs) | RAG | `sequence` |
 | [map_reduce.exs](examples/map_reduce.exs) | Map-Reduce | `fan_out`, `and_then` |
 | [structured_output.exs](examples/structured_output.exs) | Structured Output | `sequence`, `with_retry`, `with_fallback` |
