@@ -18,10 +18,10 @@ defmodule Tubie do
 
       call_llm
       |> with_retry(max: 3)
-      |> and_then(branch(&classify/1, %{
+      |> branch(&classify/1, %{
            tools: &execute/1,
            done:  &State.halt/1
-         }))
+         })
       |> loop(max: 10)
   """
 
@@ -69,7 +69,13 @@ defmodule Tubie do
       )
   """
   @spec branch((State.t() -> term()), %{term() => agent()}, Keyword.t()) :: agent()
-  def branch(classifier, table, opts \\ []) when is_function(classifier, 1) do
+  def branch(classifier, table, opts \\ [])
+
+  def branch(agent, classifier, table)
+      when is_function(agent, 1) and is_function(classifier, 1) and is_map(table),
+      do: and_then(agent, branch(classifier, table))
+
+  def branch(classifier, table, opts) when is_function(classifier, 1) do
     default = Keyword.get(opts, :default, fn s -> State.error(s, :no_matching_branch) end)
 
     fn %State{} = state ->
@@ -78,6 +84,11 @@ defmodule Tubie do
       agent.(state)
     end
   end
+
+  @doc "Pipeable `branch/3` with options: `a |> branch(classifier, table, opts)`."
+  def branch(agent, classifier, table, opts)
+      when is_function(agent, 1) and is_function(classifier, 1) and is_map(table),
+      do: and_then(agent, branch(classifier, table, opts))
 
   # ── Loop ────────────────────────────────────────────────────────
 

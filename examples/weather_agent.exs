@@ -103,12 +103,10 @@ weather_agent =
     IO.puts("  [error] #{Exception.message(e)}")
     State.error(state, Exception.message(e))
   end)
-  |> Tubie.and_then(
-    Tubie.branch(has_tool_calls?, %{
-      tools: execute_tools,
-      done: &State.halt/1
-    })
-  )
+  |> Tubie.branch(has_tool_calls?, %{
+    tools: execute_tools,
+    done: &State.halt/1
+  })
   |> Tubie.loop(max: 10)
 
 # -------------------------------------------------------------------

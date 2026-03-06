@@ -33,7 +33,7 @@ Tubie.State.get(state, :name)  # => "Alice"
 
 ## Combinators
 
-Every combinator takes agents and returns a new agent. All are pipeable.
+Every combinator takes agents and returns a new agent. Most are pipeable.
 
 | Combinator | What it does |
 |---|---|
@@ -58,7 +58,7 @@ DEEPSEEK_API_KEY=... elixir examples/rag.exs
 
 | Example | Pattern | Key Combinators |
 |---|---|---|
-| [weather_agent.exs](examples/weather_agent.exs) | Agent + Tool Use | `and_then`, `branch`, `loop`, `with_retry`, `with_fallback` |
+| [weather_agent.exs](examples/weather_agent.exs) | Agent + Tool Use | `branch`, `loop`, `with_retry`, `with_fallback` |
 | [rag.exs](examples/rag.exs) | RAG | `sequence` |
 | [map_reduce.exs](examples/map_reduce.exs) | Map-Reduce | `fan_out`, `and_then` |
 | [structured_output.exs](examples/structured_output.exs) | Structured Output | `sequence`, `with_retry`, `with_fallback` |
@@ -75,12 +75,10 @@ weather_agent =
   |> Tubie.with_fallback(fn state, e ->
     Tubie.State.error(state, Exception.message(e))
   end)
-  |> Tubie.and_then(
-    Tubie.branch(has_tool_calls?, %{
-      tools: execute_tools,
-      done:  &Tubie.State.halt/1
-    })
-  )
+  |> Tubie.branch(has_tool_calls?, %{
+    tools: execute_tools,
+    done:  &Tubie.State.halt/1
+  })
   |> Tubie.loop(max: 10)
 ```
 
