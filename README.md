@@ -48,7 +48,25 @@ Every combinator takes agents and returns a new agent. All are pipeable.
 
 ## Examples
 
-### LLM tool-calling loop
+Each example demonstrates a different [design pattern](https://the-pocket.github.io/PocketFlow/design_pattern/) using Tubie's combinators. All examples auto-detect your LLM provider from env vars (`OPENAI_API_KEY` or `DEEPSEEK_API_KEY`).
+
+```bash
+OPENAI_API_KEY=sk-... elixir examples/weather_agent.exs
+# or
+DEEPSEEK_API_KEY=... elixir examples/rag.exs
+```
+
+| Example | Pattern | Key Combinators |
+|---|---|---|
+| [weather_agent.exs](examples/weather_agent.exs) | Agent + Tool Use | `and_then`, `branch`, `loop`, `with_retry`, `with_fallback` |
+| [rag.exs](examples/rag.exs) | RAG | `sequence` |
+| [map_reduce.exs](examples/map_reduce.exs) | Map-Reduce | `fan_out`, `and_then` |
+| [structured_output.exs](examples/structured_output.exs) | Structured Output | `sequence`, `with_retry`, `with_fallback` |
+| [taboo.exs](examples/taboo.exs) | Multi-Agent (Taboo Game) | `sequence`, `loop` |
+
+### Agent + Tool Use
+
+An LLM agent that calls tools in a loop until it has a final answer:
 
 ```elixir
 weather_agent =
@@ -66,34 +84,46 @@ weather_agent =
   |> Tubie.loop(max: 10)
 ```
 
-### Concurrent fan-out with merge
+### RAG
+
+Retrieve relevant chunks, then generate an answer:
 
 ```elixir
-fetch_weather = fn label ->
-  fn state ->
-    loc = Tubie.State.get(state, :location)
-    temp = Enum.random(50..95)
-    Tubie.State.put(state, :temp, temp)
-  end
-end
-
-average_temps = fn state ->
-  [a, b] = Tubie.State.get(state, :readings)
-  avg = div(Tubie.State.get(a, :temp) + Tubie.State.get(b, :temp), 2)
-  Tubie.State.put(state, :avg_temp, avg)
-end
-
-Tubie.fan_out([fetch_weather.("A"), fetch_weather.("B")], as: :readings)
-|> Tubie.and_then(average_temps)
+rag = Tubie.sequence([retrieve, generate])
 ```
 
-### Running the full example
+### Map-Reduce
 
-```bash
-OPENAI_API_KEY=sk-... elixir examples/weather_agent.exs
+Summarize sections in parallel, then merge:
+
+```elixir
+summarizer =
+  Tubie.fan_out(map_agents, as: :partials)
+  |> Tubie.and_then(reduce)
 ```
 
-See the full example at [examples/weather_agent.exs](https://github.com/zxygentoo/tubie/blob/main/examples/weather_agent.exs).
+### Structured Output
+
+Extract structured YAML, validate, retry on failure:
+
+```elixir
+extractor =
+  Tubie.sequence([extract, parse, validate])
+  |> Tubie.with_retry(max: 3, wait: 500)
+  |> Tubie.with_fallback(fn state, e ->
+    Tubie.State.error(state, Exception.message(e))
+  end)
+```
+
+### Multi-Agent (Taboo Game)
+
+Two LLM agents take turns — a hinter gives clues, a guesser guesses:
+
+```elixir
+taboo_game =
+  Tubie.sequence([hinter, guesser, judge])
+  |> Tubie.loop(max: 5)
+```
 
 ## License
 
