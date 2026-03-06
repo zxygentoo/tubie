@@ -62,7 +62,7 @@ DEEPSEEK_API_KEY=... elixir examples/rag.exs
 | [rag.exs](examples/rag.exs) | RAG | `sequence` |
 | [map_reduce.exs](examples/map_reduce.exs) | Map-Reduce | `fan_out`, `and_then` |
 | [structured_output.exs](examples/structured_output.exs) | Structured Output | `sequence`, `with_retry`, `with_fallback` |
-| [taboo.exs](examples/taboo.exs) | Multi-Agent (Taboo Game) | `sequence`, `loop` |
+| [taboo.exs](examples/taboo.exs) | Multi-Agent (Taboo Game) | `fan_out`, `loop`, message queues |
 
 ### Agent + Tool Use
 
@@ -117,12 +117,24 @@ extractor =
 
 ### Multi-Agent (Taboo Game)
 
-Two LLM agents take turns — a hinter gives clues, a guesser guesses:
+Two LLM agents run concurrently via `fan_out`, each in its own `loop`, communicating through message queues:
 
 ```elixir
-taboo_game =
-  Tubie.sequence([hinter, guesser, judge])
-  |> Tubie.loop(max: 5)
+hinter_agent = Tubie.loop(fn state ->
+  msg = MQ.recv_msg(hinter_inbox)        # block until message
+  clue = generate_clue(state, msg)
+  MQ.send_msg(guesser_inbox, {:clue, clue})  # send to other agent
+  state
+end, max: 5)
+
+guesser_agent = Tubie.loop(fn state ->
+  {:clue, clue} = MQ.recv_msg(guesser_inbox)
+  guess = generate_guess(state, clue)
+  if correct?(guess), do: MQ.send_msg(hinter_inbox, :done)
+  state
+end, max: 5)
+
+taboo_game = Tubie.fan_out([hinter_agent, guesser_agent])
 ```
 
 ## License
