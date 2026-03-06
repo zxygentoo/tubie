@@ -143,8 +143,9 @@ defmodule Tubie do
   # ── Retry ───────────────────────────────────────────────────────
 
   @doc """
-  Retry an agent up to `max` times on `{:error, _}` status.
-  Resets status to `:ok` before each retry.
+  Retry an agent up to `max` times on `{:error, _}` status or exception.
+  Resets status to `:ok` before each retry. After max attempts, returns
+  the last error state or re-raises the last exception.
 
       call_llm |> with_retry(max: 3, wait: 1_000)
   """
@@ -161,13 +162,20 @@ defmodule Tubie do
   defp do_retry(_agent, state, attempt, max, _wait) when attempt >= max, do: state
 
   defp do_retry(agent, state, attempt, max, wait) do
-    case agent.(state) do
-      %State{status: {:error, _}} = err ->
-        if wait > 0, do: Process.sleep(wait)
-        do_retry(agent, State.ok(err), attempt + 1, max, wait)
+    try do
+      case agent.(State.ok(state)) do
+        %State{status: {:error, _}} = err ->
+          if wait > 0, do: Process.sleep(wait)
+          do_retry(agent, err, attempt + 1, max, wait)
 
-      good ->
-        good
+        good ->
+          good
+      end
+    rescue
+      e ->
+        if attempt + 1 >= max, do: reraise(e, __STACKTRACE__)
+        if wait > 0, do: Process.sleep(wait)
+        do_retry(agent, state, attempt + 1, max, wait)
     end
   end
 

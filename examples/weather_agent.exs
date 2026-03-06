@@ -1,7 +1,8 @@
 # ═══════════════════════════════════════════════════════════════════
 # Weather Agent — built entirely from Tubie combinators
 #
-# Run:  OPENAI_API_KEY=sk-... elixir examples/weather_agent.exs
+# Run:  OPENAI_API_KEY=... elixir examples/weather_agent.exs
+#   or: DEEPSEEK_API_KEY=... elixir examples/weather_agent.exs
 # ═══════════════════════════════════════════════════════════════════
 
 Mix.install([
@@ -10,40 +11,9 @@ Mix.install([
   {:jason, "~> 1.4"}
 ])
 
+Code.require_file("support/llm.exs", __DIR__)
+
 alias Tubie.State
-
-# -------------------------------------------------------------------
-# Boundary: LLM (just a function, not a module with callbacks)
-# -------------------------------------------------------------------
-defmodule LLM do
-  @url "https://api.openai.com/v1/chat/completions"
-
-  def call(messages, opts \\ []) do
-    payload =
-      %{model: "gpt-4o-mini", messages: messages}
-      |> then(fn p ->
-        case Keyword.get(opts, :tools) do
-          nil -> p
-          tools -> Map.put(p, :tools, tools)
-        end
-      end)
-
-    api_key =
-      System.get_env("OPENAI_API_KEY") ||
-        raise "OPENAI_API_KEY environment variable is not set"
-
-    case Req.post(@url, json: payload, auth: {:bearer, api_key}) do
-      {:ok, %{status: 200, body: body}} ->
-        {:ok, get_in(body, ["choices", Access.at(0), "message"])}
-
-      {:ok, %{status: status, body: body}} ->
-        {:error, "API #{status}: #{inspect(body)}"}
-
-      {:error, err} ->
-        {:error, inspect(err)}
-    end
-  end
-end
 
 # -------------------------------------------------------------------
 # Boundary: Tools (a registry of name → {spec, execute_fn})
@@ -130,17 +100,14 @@ weather_agent =
   call_llm
   |> Tubie.with_retry(max: 3, wait: 1_000)
   |> Tubie.with_fallback(fn state, e ->
-    IO.puts("  ⚠️  LLM call crashed: #{Exception.message(e)}")
+    IO.puts("  [error] #{Exception.message(e)}")
     State.error(state, Exception.message(e))
   end)
   |> Tubie.and_then(
-    Tubie.branch(
-      has_tool_calls?,
-      %{
-        tools: execute_tools,
-        done: &State.halt/1
-      }
-    )
+    Tubie.branch(has_tool_calls?, %{
+      tools: execute_tools,
+      done: &State.halt/1
+    })
   )
   |> Tubie.loop(max: 10)
 
@@ -187,32 +154,5 @@ defmodule CLI do
     end
   end
 end
-
-# -------------------------------------------------------------------
-# Fan-out demo: two agents fetch weather, a third averages them
-# -------------------------------------------------------------------
-fetch_weather = fn label ->
-  fn state ->
-    loc = State.get(state, :location)
-    temp = Enum.random(50..95)
-    IO.puts("  #{label}: #{loc} → #{temp}°F")
-    State.put(state, :temp, temp)
-  end
-end
-
-average_temps = fn state ->
-  [a, b] = State.get(state, :readings)
-  avg = div(State.get(a, :temp) + State.get(b, :temp), 2)
-  IO.puts("  Average: #{avg}°F")
-  State.put(state, :avg_temp, avg)
-end
-
-fan_out_demo =
-  Tubie.fan_out([fetch_weather.("Source A"), fetch_weather.("Source B")], as: :readings)
-  |> Tubie.and_then(average_temps)
-
-IO.puts("\n--- Fan-out demo ---")
-fan_out_demo.(State.new(%{location: "Tokyo"}))
-IO.puts("--- End demo ---\n")
 
 CLI.run(weather_agent)
